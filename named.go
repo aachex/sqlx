@@ -131,7 +131,7 @@ type namedPreparer interface {
 
 func prepareNamed(p namedPreparer, query string) (*NamedStmt, error) {
 	bindType := BindType(p.DriverName())
-	q, args, err := compileNamedQuery([]byte(query), bindType)
+	q, args, err := compileNamedQuery([]rune(query), bindType)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func bindMapArgs(names []string, arg map[string]interface{}) ([]interface{}, err
 // The rules for binding field names to parameter names follow the same
 // conventions as for StructScan, including obeying the `db` struct tags.
 func bindStruct(bindType int, query string, arg interface{}, m *reflectx.Mapper) (string, []interface{}, error) {
-	bound, names, err := compileNamedQuery([]byte(query), bindType)
+	bound, names, err := compileNamedQuery([]rune(query), bindType)
 	if err != nil {
 		return "", []interface{}{}, err
 	}
@@ -273,7 +273,7 @@ func fixBound(bound string, loop int) string {
 func bindArray(bindType int, query string, arg interface{}, m *reflectx.Mapper) (string, []interface{}, error) {
 	// do the initial binding with QUESTION;  if bindType is not question,
 	// we can rebind it at the end.
-	bound, names, err := compileNamedQuery([]byte(query), QUESTION)
+	bound, names, err := compileNamedQuery([]rune(query), QUESTION)
 	if err != nil {
 		return "", []interface{}{}, err
 	}
@@ -302,7 +302,7 @@ func bindArray(bindType int, query string, arg interface{}, m *reflectx.Mapper) 
 
 // bindMap binds a named parameter query with a map of arguments.
 func bindMap(bindType int, query string, args map[string]interface{}) (string, []interface{}, error) {
-	bound, names, err := compileNamedQuery([]byte(query), bindType)
+	bound, names, err := compileNamedQuery([]rune(query), bindType)
 	if err != nil {
 		return "", []interface{}{}, err
 	}
@@ -328,14 +328,14 @@ var allowedBindRunes = []*unicode.RangeTable{unicode.Letter, unicode.Digit}
 
 // compile a NamedQuery into an unbound query (using the '?' bindvar) and
 // a list of names.
-func compileNamedQuery(qs []byte, bindType int) (query string, names []string, err error) {
+func compileNamedQuery(qs []rune, bindType int) (query string, names []string, err error) {
 	names = make([]string, 0, 10)
-	rebound := make([]byte, 0, len(qs))
+	rebound := make([]rune, 0, len(qs))
 
 	inName := false
 	last := len(qs) - 1
 	currentVar := 1
-	name := make([]byte, 0, 10)
+	name := make([]rune, 0, 10)
 
 	for i, b := range qs {
 		// a ':' while we're in a name is an error
@@ -350,7 +350,7 @@ func compileNamedQuery(qs []byte, bindType int) (query string, names []string, e
 				return query, names, err
 			}
 			inName = true
-			name = []byte{}
+			name = []rune{}
 		} else if inName && i > 0 && b == '=' && len(name) == 0 {
 			rebound = append(rebound, ':', '=')
 			inName = false
@@ -380,13 +380,13 @@ func compileNamedQuery(qs []byte, bindType int) (query string, names []string, e
 			case DOLLAR:
 				rebound = append(rebound, '$')
 				for _, b := range strconv.Itoa(currentVar) {
-					rebound = append(rebound, byte(b))
+					rebound = append(rebound, b)
 				}
 				currentVar++
 			case AT:
 				rebound = append(rebound, '@', 'p')
 				for _, b := range strconv.Itoa(currentVar) {
-					rebound = append(rebound, byte(b))
+					rebound = append(rebound, b)
 				}
 				currentVar++
 			}
