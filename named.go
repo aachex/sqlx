@@ -319,13 +319,6 @@ func bindMap(bindType int, query string, args map[string]interface{}) (string, [
 // digits and numbers, where '5' is a digit but '五' is not.
 var allowedBindRunes = []*unicode.RangeTable{unicode.Letter, unicode.Digit}
 
-// FIXME: this function isn't safe for unicode named params, as a failing test
-// can testify.  This is not a regression but a failure of the original code
-// as well.  It should be modified to range over runes in a string rather than
-// bytes, even though this is less convenient and slower.  Hopefully the
-// addition of the prepared NamedStmt (which will only do this once) will make
-// up for the slightly slower ad-hoc NamedExec/NamedQuery.
-
 // compile a NamedQuery into an unbound query (using the '?' bindvar) and
 // a list of names.
 func compileNamedQuery(qs []rune, bindType int) (query string, names []string, err error) {
