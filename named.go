@@ -131,7 +131,7 @@ type namedPreparer interface {
 
 func prepareNamed(p namedPreparer, query string) (*NamedStmt, error) {
 	bindType := BindType(p.DriverName())
-	q, args, err := compileNamedQuery([]rune(query), bindType)
+	q, args, err := compileNamedQuery(query, bindType)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func bindMapArgs(names []string, arg map[string]interface{}) ([]interface{}, err
 // The rules for binding field names to parameter names follow the same
 // conventions as for StructScan, including obeying the `db` struct tags.
 func bindStruct(bindType int, query string, arg interface{}, m *reflectx.Mapper) (string, []interface{}, error) {
-	bound, names, err := compileNamedQuery([]rune(query), bindType)
+	bound, names, err := compileNamedQuery(query, bindType)
 	if err != nil {
 		return "", []interface{}{}, err
 	}
@@ -273,7 +273,7 @@ func fixBound(bound string, loop int) string {
 func bindArray(bindType int, query string, arg interface{}, m *reflectx.Mapper) (string, []interface{}, error) {
 	// do the initial binding with QUESTION;  if bindType is not question,
 	// we can rebind it at the end.
-	bound, names, err := compileNamedQuery([]rune(query), QUESTION)
+	bound, names, err := compileNamedQuery(query, QUESTION)
 	if err != nil {
 		return "", []interface{}{}, err
 	}
@@ -302,7 +302,7 @@ func bindArray(bindType int, query string, arg interface{}, m *reflectx.Mapper) 
 
 // bindMap binds a named parameter query with a map of arguments.
 func bindMap(bindType int, query string, args map[string]interface{}) (string, []interface{}, error) {
-	bound, names, err := compileNamedQuery([]rune(query), bindType)
+	bound, names, err := compileNamedQuery(query, bindType)
 	if err != nil {
 		return "", []interface{}{}, err
 	}
@@ -328,7 +328,7 @@ var allowedBindRunes = []*unicode.RangeTable{unicode.Letter, unicode.Digit}
 
 // compile a NamedQuery into an unbound query (using the '?' bindvar) and
 // a list of names.
-func compileNamedQuery(qs []rune, bindType int) (query string, names []string, err error) {
+func compileNamedQuery(qs string, bindType int) (query string, names []string, err error) {
 	names = make([]string, 0, 10)
 	rebound := make([]rune, 0, len(qs))
 
@@ -357,12 +357,12 @@ func compileNamedQuery(qs []rune, bindType int) (query string, names []string, e
 			continue
 			// if we're in a name, and this is an allowed character, continue
 		} else if inName && (unicode.IsOneOf(allowedBindRunes, rune(b)) || b == '_' || b == '.') && i != last {
-			// append the byte to the name if we are in a name and not on the last byte
+			// append the rune to the name if we are in a name and not on the last rune
 			name = append(name, b)
 			// if we're in a name and it's not an allowed character, the name is done
 		} else if inName {
 			inName = false
-			// if this is the final byte of the string and it is part of the name, then
+			// if this is the final rune of the string and it is part of the name, then
 			// make sure to add it to the name
 			if i == last && unicode.IsOneOf(allowedBindRunes, rune(b)) {
 				name = append(name, b)
@@ -390,14 +390,14 @@ func compileNamedQuery(qs []rune, bindType int) (query string, names []string, e
 				}
 				currentVar++
 			}
-			// add this byte to string unless it was not part of the name
+			// add this rune to string unless it was not part of the name
 			if i != last {
 				rebound = append(rebound, b)
 			} else if !unicode.IsOneOf(allowedBindRunes, rune(b)) {
 				rebound = append(rebound, b)
 			}
 		} else {
-			// this is a normal byte and should just go onto the rebound query
+			// this is a normal rune and should just go onto the rebound query
 			rebound = append(rebound, b)
 		}
 	}
